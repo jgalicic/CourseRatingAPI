@@ -5,6 +5,33 @@ const Course = require("../models").course;
 const Review = require("../models").review;
 const mid = require("../middleware/index");
 
+//--A--// GET /api/allusers 200
+
+router.get("/allusers", function(req, res, next) {
+  User.find({}).exec((err, user) => {
+    if (err) return next(err);
+    res.json(user);
+  });
+});
+
+//--B--// GET /api/allcourses 200
+
+router.get("/allcourses", function(req, res, next) {
+  Course.find({}).exec((err, user) => {
+    if (err) return next(err);
+    res.json(user);
+  });
+});
+
+//--c--// GET /api/allreviews 200
+
+router.get("/allreviews", function(req, res, next) {
+  Review.find({}).exec((err, user) => {
+    if (err) return next(err);
+    res.json(user);
+  });
+});
+
 // --01-- GET /api/users 200
 
 router.get("/users", mid.checkAuth, function(req, res, next) {
@@ -181,34 +208,44 @@ router.post("/courses/:courseId/reviews", mid.checkAuth, function(
     review: req.body.review
   };
 
-  console.log("!!!!!11111");
-
   Course.findById(req.params.courseId, function(err, course) {
     if (err) return next(err);
     if (!course) return res.send();
 
-    Review.create(review, function(err, review) {
-      if (err) {
-        res.status(400);
-        return next(err);
-      }
+    // Make sure user is logged in
+    if (!req.session.userId) {
+      let err = new Error("Please log in and try again.");
+      err.status = 400; // Bad request
+      return next(err);
+    }
 
-      course.reviews.push(review);
-
-      course.save(function(err, course) {
+    // Block current user from reviewing their own course
+    if (course.user == req.session.userId) {
+      let err = new Error("Sorry, you cannot review your own course.");
+      err.status = 401;
+      return next(err);
+    } else {
+      Review.create(review, function(err, review) {
         if (err) {
           res.status(400);
           return next(err);
         }
 
-        console.log("Setting location header");
+        course.reviews.push(review);
 
-        // Set location header
-        res.location(`/courses/${req.params.courseId}`);
+        course.save(function(err, course) {
+          if (err) {
+            res.status(400);
+            return next(err);
+          }
 
-        res.status(204).end();
+          // Set location header
+          res.location(`/courses/${req.params.courseId}`);
+
+          res.status(204).end();
+        });
       });
-    });
+    }
   });
 });
 

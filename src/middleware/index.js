@@ -1,5 +1,6 @@
 const auth = require("basic-auth");
 const User = require("../models.js").user;
+const Course = require("../models.js").course;
 
 function checkAuth(req, res, next) {
   let credentials = auth(req);
@@ -12,8 +13,6 @@ function checkAuth(req, res, next) {
     return next(err);
   } else {
     User.authenticate(credentials.name, credentials.pass, (err, user) => {
-      console.log("Name: ", credentials.name);
-      console.log("PASS: ", credentials.pass);
       if (!user) {
         let err = new Error("User not found.");
         err.status = 401;
